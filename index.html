@@ -26,6 +26,7 @@
     --err:#ff8a80; --ok:#81c784; --shadow:0 2px 12px rgba(0,0,0,.35); }
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
   font:16px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif}
 button{font:inherit;color:inherit;cursor:pointer;background:none;border:none}
@@ -119,6 +120,24 @@ input,select,textarea{font:inherit;color:inherit}
 .send:disabled{opacity:.25}
 .foot{text-align:center;font-size:11.5px;color:var(--muted);margin-top:6px}
 
+.gen{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0}
+.gen img{max-width:min(100%,420px);border-radius:16px;display:block;cursor:zoom-in;border:1px solid var(--line)}
+.shimmer{width:min(100%,360px);aspect-ratio:1;border-radius:16px;background:linear-gradient(110deg,var(--userbg) 30%,var(--hover) 50%,var(--userbg) 70%);background-size:200% 100%;animation:sh 1.4s linear infinite;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px}
+@keyframes sh{to{background-position:-200% 0}}
+.modebar{display:flex;align-items:center;gap:6px;padding:2px 6px 6px}
+.modechip{display:flex;align-items:center;gap:6px;background:#e7f0ff;color:#1f5fd6;border-radius:999px;padding:5px 10px;font-size:13.5px;font-weight:500}
+@media (prefers-color-scheme: dark){ .modechip{background:#1d2c45;color:#8db4ff} }
+.modechip button{font-size:12px;opacity:.8}
+.sizesel{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:4px 8px;font-size:13px}
+.cbtn.on{background:#e7f0ff;color:#1f5fd6}
+.viewer{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.92);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom)}
+.viewer.open{display:flex}
+.viewer img{max-width:100%;max-height:78dvh;border-radius:10px}
+.viewer .vb{display:flex;gap:10px}
+.viewer .vb button{background:#fff;color:#111;border-radius:999px;padding:10px 18px;font-weight:600}
+.viewer .vb .ghost{background:transparent;color:#fff;border:1px solid #666}
+.viewer p{color:#bbb;font-size:13px;margin:0}
+
 /* ---------- mobile ---------- */
 @media (max-width: 899px){
   .side{position:fixed;z-index:30;top:0;bottom:0;left:0;padding-top:env(safe-area-inset-top);box-shadow:var(--shadow);margin-left:0}
@@ -197,11 +216,20 @@ input,select,textarea{font:inherit;color:inherit}
     <div class="composer-wrap">
       <div class="pill">
         <div class="pending" id="pending" hidden></div>
+        <div class="modebar" id="modebar" hidden>
+          <span class="modechip">🎨 Зображення <button id="modeOff" title="Вимкнути">✕</button></span>
+          <select class="sizesel" id="sizeSel" title="Формат">
+            <option value="1024x1024">1:1 квадрат</option>
+            <option value="1024x1536">2:3 вертикаль</option>
+            <option value="1536x1024">3:2 горизонталь</option>
+          </select>
+        </div>
         <div class="row">
           <button class="cbtn" id="attachBtn" title="Додати фото або файл"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button>
           <input type="file" id="fileInput" multiple hidden
             accept="image/*,.pdf,.docx,.xlsx,.xls,.csv,.txt,.md,.json,.html,.htm,.xml,.srt,.vtt,.js,.ts,.py,.css,.log,.rtf,text/*">
           <textarea id="input" rows="1" placeholder="Запитай що завгодно"></textarea>
+          <button class="cbtn" id="imgBtn" title="Створити зображення"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg></button>
           <button class="cbtn" id="voiceBtn" title="Голосова розмова"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg></button>
           <button class="cbtn send" id="sendBtn" title="Надіслати" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
         </div>
@@ -227,6 +255,8 @@ input,select,textarea{font:inherit;color:inherit}
       <button class="btn2" id="reloadModels" title="Оновити список">↻</button>
     </div>
     <div class="status" id="modelStatus"></div>
+    <label for="imgModelSel">Модель для картинок</label>
+    <select id="imgModelSel"></select>
     <label for="langSelect">Мова голосу</label>
     <select id="langSelect">
       <option value="uk-UA">Українська</option><option value="en-US">English</option>
@@ -249,6 +279,11 @@ input,select,textarea{font:inherit;color:inherit}
   <div class="vbtns"><button id="vmute">⏸ Пауза</button><button class="end" id="vend">Завершити</button></div>
 </div>
 <div class="toast" id="toast"></div>
+<div class="viewer" id="viewer">
+  <img id="viewerImg" alt="">
+  <p>Щоб зберегти у Фото — утримуй картинку або натисни «Поділитися»</p>
+  <div class="vb"><button id="viewerShare">Поділитися / Зберегти</button><button class="ghost" id="viewerClose">Закрити</button></div>
+</div>
 
 <script>
 (() => {
@@ -257,7 +292,7 @@ const LS = {
   get(k,d){ try{ const v=localStorage.getItem('wt_'+k); return v===null?d:JSON.parse(v);}catch(e){return d;} },
   set(k,v){ try{ localStorage.setItem('wt_'+k, JSON.stringify(v)); }catch(e){} }
 };
-let settings = Object.assign({key:'', base:'https://api.whitetools.dev/v1', model:'', system:'', lang:'uk-UA'}, LS.get('settings', {}));
+let settings = Object.assign({key:'', base:'https://api.whitetools.dev/v1', model:'', system:'', lang:'uk-UA', imgModel:'gpt-6-sol', imgSize:'1024x1024'}, LS.get('settings', {}));
 let models = LS.get('models', []);
 
 /* ================= storage (IndexedDB) ================= */
@@ -435,13 +470,20 @@ function msgEl(m, i){
   } else if(m.role==='error'){
     const b=document.createElement('div'); b.className='bubble'; b.textContent=m.text; row.appendChild(b);
   } else {
-    const b=document.createElement('div'); b.className='bubble'; b.innerHTML = m.text ? md(m.text) : '<span class="cursor"></span>'; row.appendChild(b);
+    const b=document.createElement('div'); b.className='bubble';
+    if(m.kind==='image'){
+      if(m.genImages && m.genImages.length){ const g=document.createElement('div'); g.className='gen';
+        m.genImages.forEach(src=>{ const im=document.createElement('img'); im.src=src; im.onclick=()=>openViewer(src); g.appendChild(im); }); b.appendChild(g); }
+      else if(m.pending){ b.innerHTML='<div class="shimmer">Створюю зображення…</div>'; }
+      if(m.text){ const t=document.createElement('div'); t.innerHTML=md(m.text); b.appendChild(t); }
+    } else b.innerHTML = m.text ? md(m.text) : '<span class="cursor"></span>';
+    row.appendChild(b);
     const act=document.createElement('div'); act.className='actions';
     const cp=document.createElement('button'); cp.title='Копіювати'; cp.innerHTML=ICON_COPY;
     cp.onclick=async()=>{ try{ await navigator.clipboard.writeText(m.text); toast('Скопійовано'); }catch(e){ toast('Не вдалося скопіювати'); } };
     const sp=document.createElement('button'); sp.title='Прочитати вголос'; sp.innerHTML=ICON_SPK;
     sp.onclick=()=>{ try{ speechSynthesis.cancel(); const u=new SpeechSynthesisUtterance(plain(m.text)); u.lang=settings.lang; speechSynthesis.speak(u);}catch(e){} };
-    act.append(cp, sp);
+    if(m.kind!=='image') act.append(cp, sp);
     if(i===current.messages.length-1){ const re=document.createElement('button'); re.title='Згенерувати ще раз'; re.innerHTML=ICON_RE; re.onclick=regenerate; act.append(re); }
     row.appendChild(act);
   }
@@ -479,6 +521,7 @@ async function loadModels(){
     const keep = settings.model && list.includes(settings.model) ? settings.model : list[0];
     el.modelSel.innerHTML = list.map(id=>`<option value="${esc(id)}">${esc(id)}</option>`).join(''); el.modelSel.value = keep;
     el.modelStatus.className='status ok'; el.modelStatus.textContent='✓ Ключ працює, моделей: '+list.length;
+    fillImgModels();
   }catch(e){ el.modelStatus.className='status err'; el.modelStatus.textContent=friendly(e); }
 }
 el.key.addEventListener('input', ()=>{ clearTimeout(loadTimer); loadTimer=setTimeout(loadModels,500); });
@@ -494,11 +537,18 @@ function friendly(e){
 }
 
 /* ---------- settings ---------- */
+function fillImgModels(){
+  const sel=$('imgModelSel'); const gpt=(models.length?models:[]).filter(m=>/^gpt/i.test(m));
+  const list = gpt.length ? gpt : [settings.imgModel||'gpt-6-sol'];
+  if(!list.includes(settings.imgModel)) list.unshift(settings.imgModel);
+  sel.innerHTML = list.map(id=>`<option value="${esc(id)}">${esc(id)}</option>`).join(''); sel.value = settings.imgModel;
+}
 function openSettings(){
   el.key.value=settings.key; el.base.value=settings.base; el.sys.value=settings.system||''; el.lang.value=settings.lang||'uk-UA';
   const list = models.length?models:(settings.model?[settings.model]:[]);
   el.modelSel.innerHTML = list.length ? list.map(id=>`<option value="${esc(id)}">${esc(id)}</option>`).join('') : '<option value="">— спершу встав ключ —</option>';
   if(settings.model) el.modelSel.value=settings.model;
+  fillImgModels();
   el.sheet.classList.add('open'); if(settings.key) loadModels();
 }
 $('openSettings').onclick = openSettings;
@@ -506,7 +556,7 @@ $('closeSettings').onclick = ()=> el.sheet.classList.remove('open');
 el.sheet.addEventListener('click', e=>{ if(e.target===el.sheet) el.sheet.classList.remove('open'); });
 $('toggleKey').onclick = ()=>{ const p=el.key.type==='password'; el.key.type=p?'text':'password'; $('toggleKey').textContent=p?'Сховати':'Показати'; };
 $('saveSettings').onclick = ()=>{
-  settings = {key:el.key.value.trim(), base:baseUrl(), model:el.modelSel.value, system:el.sys.value.trim(), lang:el.lang.value};
+  settings = Object.assign(settings, {key:el.key.value.trim(), base:baseUrl(), model:el.modelSel.value, system:el.sys.value.trim(), lang:el.lang.value, imgModel:$('imgModelSel').value || settings.imgModel});
   LS.set('settings', settings); el.sheet.classList.remove('open');
   if(current && !current.messages.length) current.model = settings.model;
   renderThread();
@@ -611,7 +661,7 @@ function toApi(msgs, voice){
   if(voice) sys = (sys?sys+'\n\n':'') + 'Зараз голосова розмова: відповідай коротко (1–4 речення), розмовно, без markdown, списків і емодзі. Відповідай мовою користувача.';
   if(sys) out.push({role:'system', content:sys});
   msgs.filter(m=>m.role==='user'||m.role==='assistant').forEach(m=>{
-    if(m.role==='assistant'){ out.push({role:'assistant', content:m.text||''}); return; }
+    if(m.role==='assistant'){ out.push({role:'assistant', content:(m.kind==='image' ? '[Згенеровано зображення] ' : '') + (m.text||'')}); return; }
     let text = m.text||'';
     (m.files||[]).forEach(f=>{ if(f.text) text += `\n\n[Файл: ${f.name}]\n\`\`\`\n${f.text}\n\`\`\``; else if(f.images&&f.images.length) text += `\n\n[Файл: ${f.name} — скан, сторінки додано як зображення]`; });
     const imgs = [...(m.images||[]), ...(m.files||[]).flatMap(f=>f.images||[])];
@@ -632,10 +682,12 @@ async function send(voiceText, onDelta){
   current.model = model;
   const userMsg = {role:'user', text, images: att.filter(a=>a.kind==='image').map(a=>a.src),
     files: att.filter(a=>a.kind==='file').map(a=>({name:a.name, ext:a.ext, size:a.size, text:a.text, images:a.images}))};
+  if(imgMode && !voice) userMsg.imgReq = true;
   current.messages.push(userMsg);
-  if(current.title==='Новий чат') current.title = titleFrom(text || userMsg.files[0]?.name || 'Фото');
+  if(current.title==='Новий чат') current.title = titleFrom((imgMode&&!voice?'🎨 ':'') + (text || userMsg.files[0]?.name || 'Фото'));
   if(!voice){ pending=[]; drawPending(); el.input.value=''; el.input.style.height='auto'; }
   await persist(current);
+  if(userMsg.imgReq) return generateImage(userMsg);
   return complete(voice, onDelta);
 }
 
@@ -674,8 +726,76 @@ async function regenerate(){
   if(busy) return;
   while(current.messages.length && current.messages[current.messages.length-1].role!=='user') current.messages.pop();
   if(!current.messages.length) return;
-  complete(false);
+  const lastU = current.messages[current.messages.length-1];
+  if(lastU.imgReq) generateImage(lastU); else complete(false);
 }
+
+/* ================= image generation ================= */
+let imgMode = false;
+function setImgMode(on){
+  imgMode = on; $('modebar').hidden = !on; $('imgBtn').classList.toggle('on', on);
+  el.input.placeholder = on ? 'Опиши картинку… (можна додати фото для редагування)' : 'Запитай що завгодно';
+  $('sizeSel').value = settings.imgSize || '1024x1024';
+  if(on) el.input.focus();
+}
+$('imgBtn').onclick = ()=> setImgMode(!imgMode);
+$('modeOff').onclick = ()=> setImgMode(false);
+$('sizeSel').onchange = ()=>{ settings.imgSize=$('sizeSel').value; LS.set('settings', settings); };
+
+function toJpeg(src, max=1536){
+  return new Promise(res=>{ const img=new Image(); img.onload=()=>{ let w=img.width,h=img.height; const s=Math.min(1,max/Math.max(w,h)); w=Math.round(w*s); h=Math.round(h*s);
+    const c=document.createElement('canvas'); c.width=w; c.height=h; const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,w,h); x.drawImage(img,0,0,w,h); res(c.toDataURL('image/jpeg',.9)); }; img.onerror=()=>res(src); img.src=src; });
+}
+async function generateImage(userMsg){
+  const chat = current;
+  const reply = {role:'assistant', kind:'image', text:'', genImages:[], pending:true}; chat.messages.push(reply);
+  renderThread(); scrollDown(true);
+  busy=true; updateSend(); controller=new AbortController();
+  try{
+    // inputs: attached photos, else the last generated image in this chat (for iterative edits)
+    let inputs = [...(userMsg.images||[])];
+    if(!inputs.length){
+      for(let i=chat.messages.length-3;i>=0;i--){ const m=chat.messages[i]; if(m.kind==='image' && m.genImages && m.genImages.length){ inputs=[await toJpeg(m.genImages[0])]; break; } if(m.role==='user' && !m.imgReq) break; }
+    }
+    const content = [{type:'input_text', text: userMsg.text || 'Покращ це зображення'}];
+    inputs.forEach(u=>content.push({type:'input_image', image_url:u}));
+    const r = await fetch(settings.base+'/responses', { method:'POST', signal:controller.signal,
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+settings.key},
+      body: JSON.stringify({ model: settings.imgModel || 'gpt-6-sol',
+        input:[{role:'user', content}],
+        tools:[{type:'image_generation', size: settings.imgSize || '1024x1024', quality:'auto'}],
+        tool_choice:{type:'image_generation'} }) });
+    const t = await r.text();
+    if(!r.ok) throw new Error('HTTP '+r.status+': '+t.slice(0,300));
+    const j = JSON.parse(t);
+    (j.output||[]).forEach(o=>{
+      if(o.type==='image_generation_call' && o.result) reply.genImages.push('data:image/png;base64,'+o.result);
+      if(o.type==='message') (o.content||[]).forEach(c=>{ if(c.text) reply.text += c.text; });
+    });
+    if(!reply.genImages.length) throw new Error(reply.text || 'Модель не повернула зображення');
+    reply.text = '';
+  }catch(e){
+    chat.messages.pop();
+    if(e.name!=='AbortError') chat.messages.push({role:'error', text:'Не вдалося створити зображення: '+friendly(e)});
+  }
+  delete reply.pending;
+  busy=false; controller=null; updateSend(); await persist(chat); if(chat===current) renderThread();
+  return '';
+}
+
+/* ---------- image viewer ---------- */
+let viewerSrc='';
+function openViewer(src){ viewerSrc=src; $('viewerImg').src=src; $('viewer').classList.add('open'); }
+$('viewerClose').onclick=()=>$('viewer').classList.remove('open');
+$('viewer').onclick=e=>{ if(e.target.id==='viewer') $('viewer').classList.remove('open'); };
+$('viewerShare').onclick=async()=>{
+  try{
+    const blob = await (await fetch(viewerSrc)).blob();
+    const file = new File([blob], 'wt-image-'+Date.now()+'.png', {type:blob.type||'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file]}); return; }
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=file.name; document.body.appendChild(a); a.click(); a.remove();
+  }catch(e){ if(e.name!=='AbortError') toast('Утримуй картинку, щоб зберегти'); }
+};
 
 /* ---------- expose for voice ---------- */
 window.WT = { send:(t,cb)=>send(t,cb), settings:()=>settings, abort:()=>{ if(controller) controller.abort(); }, openSettings, ready:()=>!!(settings.key && ((current&&current.model)||settings.model)) };
